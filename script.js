@@ -65,9 +65,9 @@ function formatTime(timeSpent) {
   const minutes = timeSpent % 60;
 
     if(hours > 0) {
-        return hours + 'h ' + minutes;
+        return hours + 'h ' + minutes +'m';
     } else {
-        return minutes;
+        return minutes +'m';
     }
 };
 
@@ -218,6 +218,13 @@ function renderOperation(ul, status, operationId, operationDescription, timeSpen
         buttonDelete.className = 'btn btn-outline-danger btn-sm';
         buttonDelete.innerText = 'Delete';
         buttonDiv.appendChild(buttonDelete);
+        buttonDelete.addEventListener('click', function(){
+            apiDeleteOperation(operationId).then(
+                function(){
+                    li.remove();
+                }
+            )
+        })
     }
 
 };
@@ -293,4 +300,22 @@ function apiUpdateOperation(operationId, description, timeSpent) {
         return resp.json();
       }
     );
+};
+
+function apiDeleteOperation(operationId) {
+    return fetch(
+        apihost + '/api/operations/' + operationId,
+        {
+          headers: { Authorization: apikey },
+          method: 'DELETE'
+        }
+      ).then(
+        function (resp) {
+          if(!resp.ok) {
+            alert('Error! Open devtools, find Network tab and look what goes work');
+          }
+          return resp.json();
+        }
+      );
+
 };
