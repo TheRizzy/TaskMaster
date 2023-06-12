@@ -15,6 +15,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
         }
     )
+    document.querySelector(".js-task-adding-form").addEventListener('submit', function (event) {
+        event.preventDefault();
+        // event.target is element of <form>
+        // .elements give opurtunitie to ask form of his field (using 'name' atribiutes)
+        apiCreateTask(event.target.elements.title.value, 
+            event.target.elements.description.value
+            ).then(
+            function(response) {renderTask(response.data.id, response.data.title, 
+                response.data.description, response.data.status);}
+        )
+    });
 });
 
 function apiListTasks() {
@@ -31,7 +42,7 @@ function apiListTasks() {
             return resp.json();
         }
     )
-}
+};
 
 function apiListOperationsForTask(taskId) {
     return fetch(
@@ -47,8 +58,18 @@ function apiListOperationsForTask(taskId) {
         return resp.json();
       }
     );
-  }
+};
 
+function formatTime(timeSpent) {
+  const hours = Math.floor(timeSpent / 60);
+  const minutes = timeSpent % 60;
+
+    if(hours > 0) {
+        return hours + 'h ' + minutes;
+    } else {
+        return minutes;
+    }
+};
 
 function renderTask(taskId, title, description, status) {
     const section = document.createElement('section');
@@ -85,6 +106,10 @@ function renderTask(taskId, title, description, status) {
     deleteButton.className = 'btn btn-outline-danger btn-sm ml-2';
     deleteButton.innerText = 'Delete';
     headerRightDiv.appendChild(deleteButton);
+    deleteButton.addEventListener('click', function(){
+        apiDeleteTask(taskId);
+        section.remove();
+    })
 
     const ul = document.createElement('ul');
     ul.className = 'list-group list-group-flush';
@@ -94,7 +119,8 @@ function renderTask(taskId, title, description, status) {
         function (response) {
             response.data.forEach(
                 function (operation) { renderOperation(ul, status, operation.id,
-                    operation.description, operation.timeSpent);}
+                    operation.description, formatTime(operation.timeSpent));
+                }
             )
         }
     )
@@ -126,6 +152,21 @@ function renderTask(taskId, title, description, status) {
     inputOpperation.minlength = '5';
     divFormInput.appendChild(inputOpperation);
 
+    form.addEventListener('submit', function(event){
+        event.preventDefault();
+        apiCreateOperationForTask(taskId, inputOpperation.value).then(
+            function(response){
+                renderOperation(
+                    ul,
+                    status,
+                    response.data.id,
+                    response.data.description,
+                    response.data.timeSpent
+                )
+            }
+        )
+    })
+
 };
 
 function renderOperation(ul, status, operationId, operationDescription, timeSpent) {
@@ -151,11 +192,27 @@ function renderOperation(ul, status, operationId, operationDescription, timeSpen
         button15m.className = 'btn btn-outline-success btn-sm mr-2';
         button15m.innerText = '+15m';
         buttonDiv.appendChild(button15m);
+        button15m.addEventListener('click', function() {
+            apiUpdateOperation(operationId, operationDescription, timeSpent + 15).then(
+              function(response) {
+                time.innerText = formatTime(response.data.timeSpent);
+                timeSpent = response.data.timeSpent;
+              }
+            );
+          });
         
         const button1h = document.createElement('button');
         button1h.className = 'btn btn-outline-success btn-sm mr-2';
         button1h.innerText = '+1h';
         buttonDiv.appendChild(button1h);
+        button1h.addEventListener('click', function() {
+            apiUpdateOperation(operationId, operationDescription, timeSpent + 60).then(
+              function(response) {
+                time.innerText = formatTime(response.data.timeSpent);
+                timeSpent = response.data.timeSpent;
+              }
+            );
+          });
 
         const buttonDelete = document.createElement('button');
         buttonDelete.className = 'btn btn-outline-danger btn-sm';
@@ -163,4 +220,77 @@ function renderOperation(ul, status, operationId, operationDescription, timeSpen
         buttonDiv.appendChild(buttonDelete);
     }
 
-}
+};
+
+function apiCreateTask(title, description) {
+    return fetch(
+        apihost + '/api/tasks',
+        {
+            headers: { Authorization: apikey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({title: title, description: description, status: 'open'}),
+            method: 'POST',
+        }
+    ).then(
+        function(resp){
+            if (!resp.ok) {
+                alert('Error! Open devtools, find Network tab and look what goes work');
+            }
+            return resp.json();
+        }
+    )
+};
+
+function apiDeleteTask(taskId) {
+    return fetch(
+        apihost + '/api/tasks/' + taskId,
+        {
+            headers: {Authorization: apikey},
+            method: 'DELETE'
+        }
+    ).then(
+        function (resp) {
+            if(!resp.ok) {
+                alert('Error! Open devtools, find Network tab and look what goes work');
+            }
+            return resp.json();
+        }
+
+    )
+
+};
+
+function apiCreateOperationForTask(taskId, description){
+    return fetch(
+        apihost + '/api/tasks/' +taskId +'/operations',
+        {
+            headers: { Authorization: apikey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({description: description, timeSpent: 0}),
+            method: 'POST',
+        }
+    ).then(
+        function(resp){
+            if (!resp.ok) {
+                alert('Error! Open devtools, find Network tab and look what goes work');
+            }
+            return resp.json();
+        }
+    )
+};
+
+function apiUpdateOperation(operationId, description, timeSpent) {
+    return fetch(
+      apihost + '/api/operations/' + operationId,
+      {
+        headers: { Authorization: apikey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: description, timeSpent: timeSpent }),
+        method: 'PUT'
+      }
+    ).then(
+      function (resp) {
+        if(!resp.ok) {
+          alert('Error! Open devtools, find Network tab and look what goes work');
+        }
+        return resp.json();
+      }
+    );
+};
