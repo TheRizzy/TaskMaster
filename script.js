@@ -100,6 +100,16 @@ function renderTask(taskId, title, description, status) {
         finishButton.className = 'btn btn-dark btn-sm js-task-open-only';
         finishButton.innerText = 'Finish';
         headerRightDiv.appendChild(finishButton);
+        finishButton.addEventListener('click', function(){
+            apiUpdateTask(taskId, title, description, 'closed').then(
+                section.querySelectorAll('.js-task-open-only').forEach(
+                    function(element){
+                        element.remove();
+                    }
+                )
+
+            )
+        })
     }
 
     const deleteButton = document.createElement('button');
@@ -319,3 +329,21 @@ function apiDeleteOperation(operationId) {
       );
 
 };
+
+function apiUpdateTask(taskId, title, description, status){
+    return fetch(
+        apihost + '/api/tasks/' + taskId,
+        {
+            headers: { Authorization: apikey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({title: title, description: description, status: status}),
+            method: 'PUT',
+        }
+    ).then(
+        function(resp){
+            if (!resp.ok) {
+                alert('Error! Open devtools, find Network tab and look what goes work');
+            }
+            return resp.json();
+        }
+    )
+}
